@@ -1,0 +1,336 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        0
+      ],
+      "id": "7987326f-f587-442e-8902-ff36c7ed2632",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11T3xtF6vFebYJ0gtPt1lhjagSFvhT8PbJxmVu-62TH4",
+          "mode": "list",
+          "cachedResultName": "Customer Feedback (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11T3xtF6vFebYJ0gtPt1lhjagSFvhT8PbJxmVu-62TH4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 120901396,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11T3xtF6vFebYJ0gtPt1lhjagSFvhT8PbJxmVu-62TH4/edit#gid=120901396"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "1d6c66bb-ec40-47fc-9d4f-ba0b02dfcb19",
+      "name": "get_form_data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "giSYFRtMr2x0gEiw",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keep": "lastItems"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "245588a0-c79d-46f7-858d-6ff987a7b389",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json['Feedback Type'] }}{{ $json.Feedback }}{{ $json['Suggestions for improvement'] }}{{ $json.Name }}{{ $json.Email }}",
+        "options": {
+          "categories": "Positive, Neutral, Negative"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+      "typeVersion": 1.1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "4ee5598d-9a28-4913-abc2-587faf5f7c06",
+      "name": "Sentiment Analysis"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        224
+      ],
+      "id": "f651c3e8-25ab-418c-92af-0fca15be081b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "qlzqjubdZIWoeCer",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an AI assistant tasked with creating a professional and empathetic email response to customer feedback. Based on the details provided, draft an email that reflects the sentiment of the feedback (positive, negative,  or neutral) and acknowledges the customer's input.\n\nFeedback Details:\n\n- Customer Name:  {{ $json.Name }}\n\n- Sentiment: {{ $json.sentimentAnalysis }}\n\n- Feedback: {{ $json.Feedback }}\n\n- Customer Email: {{ $json.Email }}\n\n- Feedback Type: {{ $json['Feedback Type'] }}\n\n- Suggestion: {{ $json['Suggestions for improvement'] }}\n\nInstructions for the AI:\n\nIf the sentiment is positive, thank the customer warmly for their feedback and encourage continued engagement.\n\nIf the sentiment is neutral, acknowledge their input and show willingness to listen.\n\nIf the sentiment is negative, apologize for any inconvenience, express empathy, and, if a suggestion is provided, mention your intention to improve.\n\nAddress the customer by name.\n\nKeep the email concise, appreciative, and professional.\n\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        656,
+        -208
+      ],
+      "id": "d93299a6-6cc9-41b8-9f24-51a5328be5e3",
+      "name": "get_thanks_mail_content",
+      "credentials": {
+        "openAiApi": {
+          "id": "qlzqjubdZIWoeCer",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Limit').item.json.Email }}",
+        "subject": "={{ $json.message.content.split('\\n\\n') }}",
+        "message": "={{ $json.message.content.split('\\n\\n').slice(1).join('\\n\\n') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1008,
+        -208
+      ],
+      "id": "d8c9e54e-6630-4f48-937b-abd03e248525",
+      "name": "thanks_customer",
+      "webhookId": "620a8a21-3d80-47d8-b216-0772d40e8452",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P3rxGil199PPeO87",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=jamwalkarmanya37@gmail.com",
+        "subject": "={{ $json.message.content.split('\\n\\n') }}",
+        "message": "={{ $json.message.content.split('\\n\\n').slice(1).join('\\n\\n') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1008,
+        256
+      ],
+      "id": "ca80d16a-11c3-4c7b-aed7-b1b758d57d9c",
+      "name": "notify_marketing team",
+      "webhookId": "620a8a21-3d80-47d8-b216-0772d40e8452",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P3rxGil199PPeO87",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an AI assistant for the marketing team, tasked with creating a friendly and engaging email response to customer feedback. Based on the details provided, draft an email that reflects the sentiment of the feedback (positive, negative, or neutral), acknowledges the customer's input, and encourages continued engagement with our brand.\n\nFeedback Details:\n\nCustomer Name: {{ $json.Name }}\n\nSentiment: {{ $json.sentimentAnalysis }}\n\nFeedback: {{ $json.Feedback }}\n\nCustomer Email: {{ $json.Email }}\n\nFeedback Type: {{ $json['Feedback Type'] }}\n\nSuggestion: {{ $json['Suggestions for improvement'] }}\n\nInstructions for the AI:\n\nIf the sentiment is positive, celebrate the customer’s satisfaction and consider inviting them to join upcoming promotions, social channels, or share testimonials.\n\nIf the sentiment is neutral, thank them for their input and invite them to explore more about our products or offers.\n\nIf the sentiment is negative, express appreciation for their honesty, offer support or incentives (such as a discount or special offer, if appropriate), and invite them to stay connected for future updates.\n\nAlways address the customer by name.\n\nKeep the email upbeat, brand-aligned, and ensure it encourages further interaction."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        640,
+        256
+      ],
+      "id": "718d16ec-3e5f-411a-b4fb-72fe1b82a126",
+      "name": "get_notify_mail_content",
+      "credentials": {
+        "openAiApi": {
+          "id": "qlzqjubdZIWoeCer",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "get_form_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_form_data": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "get_thanks_mail_content",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get_notify_mail_content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "get_thanks_mail_content",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get_notify_mail_content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "get_thanks_mail_content",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get_notify_mail_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_thanks_mail_content": {
+      "main": [
+        [
+          {
+            "node": "thanks_customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_notify_mail_content": {
+      "main": [
+        [
+          {
+            "node": "notify_marketing team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "755d993d-02d7-417a-bba2-5cc1bffa69ca",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "af2c8914b10488049bc6e5a441259307fb3950e2fe4e517be8803c37e908d47e"
+  },
+  "id": "L03HrCvnJZZ7AEEW",
+  "tags": []
+}
